@@ -1,21 +1,13 @@
 # goq
 Learning project that implements distributed-message queue like [Celery]
 
-# Feature
+## Features
 - [ ] 
 
-# Todo
+## Todo
 - [ ] Project structure
 
-# Example
-
-
-```go
-
-
-func 
-
-```
+## Concepts
 
 - pubsub - implements method to communicate with the message broker
 - task - push and pull task from pubsub

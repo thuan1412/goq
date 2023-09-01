@@ -1,15 +1,17 @@
 package pubsub
 
+import "context"
+
 type GoChannel struct {
 	topic chan Message
 }
 
-func (g GoChannel) Publish(topicName string, msg Message) (_ error) {
+func (g GoChannel) Publish(ctx context.Context, topicName string, msg Message) (_ error) {
 	g.topic <- msg
 	return nil
 }
 
-func (g GoChannel) Subscribe(topicName string) chan Message {
+func (g GoChannel) Subscribe(ctx context.Context, topicName string) chan Message {
 	return g.topic
 }
 

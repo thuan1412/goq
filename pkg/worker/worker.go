@@ -2,30 +2,34 @@ package worker
 
 import (
 	"context"
+	"goq/pkg/pubsub"
 	"goq/pkg/task"
-	"log"
 )
 
 type Worker struct {
-	tasks []task.Tasker
+	tasks    []task.Tasker
+	pubsuber pubsub.Pubsuber
 }
 
-func NewWorker() *Worker {
+func NewWorker(pubsuber pubsub.Pubsuber) *Worker {
 	return &Worker{
-		tasks: []task.Tasker{},
+		tasks:    []task.Tasker{},
+		pubsuber: pubsuber,
 	}
 }
 
 func (w *Worker) Run() {
 	for _, t := range w.tasks {
 		go func(t task.Tasker) {
-			for msg := range t.GetMsgChannel(context.Background()) {
-				log.Println("msg: ", msg)
+			for {
+				msg := <-w.pubsuber.Subscribe(context.Background(), "asdf")
+				t.Handle(context.Background(), msg)
 			}
 		}(t)
 	}
 }
 
-func (w *Worker) Register(t task.Tasker) {
+func (w *Worker) Register(ctx context.Context, t task.Tasker) {
+	t.SetPubsuber(ctx, w.pubsuber)
 	w.tasks = append(w.tasks, t)
 }

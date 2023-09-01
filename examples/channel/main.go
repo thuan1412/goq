@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"goq/pkg/pubsub"
+	"goq/pkg/task"
 	"goq/pkg/worker"
 )
 
 type Greeter struct {
-	Pubsub pubsub.Pubsuber
-	Name   string
+	task.BaseTasker
+	Queue string
 }
 
 // Handle handles the message
@@ -20,28 +21,16 @@ func (g Greeter) Handle(ctx context.Context, msg pubsub.Message) error {
 	return nil
 }
 
-// Delay send message to the queue
-func (g Greeter) Delay(ctx context.Context, msg pubsub.Message) error {
-	g.Pubsub.Publish(g.Name, msg)
-	return nil
-}
-
-// GetMsgChannel returns a channel of messages
-func (g Greeter) GetMsgChannel(ctx context.Context) <-chan pubsub.Message {
-	return g.Pubsub.Subscribe("asdf")
-}
-
-func NewGreeter(pubsub pubsub.Pubsuber, name string) Greeter {
-	return Greeter{
-		Pubsub: pubsub,
-		Name:   name,
+func NewGreeter(queue string) *Greeter {
+	return &Greeter{
+		Queue: queue,
 	}
 }
 
-func publish(pubsuber pubsub.Pubsuber) {
+func publish(t task.Tasker) {
 	for {
 		log.Println("publishing...")
-		pubsuber.Publish("greeter", pubsub.Message{
+		t.Delay(context.Background(), pubsub.Message{
 			Payload: "hello",
 		})
 
@@ -50,15 +39,17 @@ func publish(pubsuber pubsub.Pubsuber) {
 }
 
 func main() {
+	ctx := context.Background()
 	log.Println("start example")
 	channel := make(chan pubsub.Message, 10)
 	gochanPubsub := pubsub.NewGoChannel(channel)
 
-	greeter := NewGreeter(gochanPubsub, "greeter")
-	go publish(gochanPubsub)
+	greeter := NewGreeter("greeter")
 	// worker
-	w := worker.NewWorker()
-	w.Register(greeter)
+	w := worker.NewWorker(gochanPubsub)
+	w.Register(ctx, greeter)
+
+	go publish(greeter)
 	w.Run()
 	time.Sleep(10 * time.Second)
 }
