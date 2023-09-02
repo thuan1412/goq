@@ -1,11 +1,8 @@
 # goq
 Learning project that implements distributed-message queue like [Celery]
 
-## Features
-- [ ] 
-
 ## Todo
-- [ ] Project structure
+- [ ] Use wire in worker initialization to reduce boilerplate
 
 ## Concepts
 

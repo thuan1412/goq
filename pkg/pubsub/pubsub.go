@@ -1,11 +1,26 @@
 package pubsub
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"log"
+)
 
 type Handler = func(message any) error
 
 type Message struct {
-	Payload any
+	TaskName string `json:"task_name"`
+	UUID     string `json:"uuid"`
+	Payload  any    `json:"payload"`
+}
+
+// Marshal returns the payload as a string in json format
+func (m Message) Marshal() []byte {
+	jsonStr, err := json.Marshal(m)
+	if err != nil {
+		log.Println("error marshalling payload: ", err)
+	}
+	return jsonStr
 }
 
 type Pubsuber interface {

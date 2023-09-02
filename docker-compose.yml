@@ -1,0 +1,9 @@
+# docker file that starts rabbitmq instances
+version: "3.7"
+services:
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
