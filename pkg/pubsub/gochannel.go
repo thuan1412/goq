@@ -11,7 +11,7 @@ func (g GoChannel) Publish(ctx context.Context, topicName string, msg Message) (
 	return nil
 }
 
-func (g GoChannel) Subscribe(ctx context.Context, topicName string) chan Message {
+func (g GoChannel) Subscribe(ctx context.Context, topicName string) <-chan Message {
 	return g.topic
 }
 

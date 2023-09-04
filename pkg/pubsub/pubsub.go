@@ -25,5 +25,5 @@ func (m Message) Marshal() []byte {
 
 type Pubsuber interface {
 	Publish(ctx context.Context, topicName string, msg Message) error
-	Subscribe(ctx context.Context, topicName string) chan Message
+	Subscribe(ctx context.Context, topicNames ...string) <-chan Message
 }

@@ -2,6 +2,9 @@ package pubsub
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/samber/lo"
@@ -10,6 +13,8 @@ import (
 const defaultExchange = "goq"
 const defaultContentType = "text/plain"
 const defaultDns = "amqp://localhost:5672/"
+
+const consumerName = "goq"
 
 // Amqp is a struct that implements the PubSub interface for AMQP
 type Amqp struct {
@@ -43,8 +48,39 @@ func (a Amqp) Publish(ctx context.Context, topicName string, msg Message) error 
 	})
 }
 
-func (Amqp) Subscribe(ctx context.Context, topicName string) (_ chan Message) {
-	panic("not implemented") // TODO: Implement
+func (a Amqp) Subscribe(ctx context.Context, topicNames ...string) <-chan Message {
+	// test with buffered channel with size of 10
+	msgs := make(chan Message, 10)
+
+	for idx, topicName := range topicNames {
+		deliveryMsgs, err := a.ch.Consume(
+			topicName,
+			fmt.Sprintf("%s-%s-%d", consumerName, topicName, idx),
+			true,
+			false,
+			false,
+			false,
+			nil,
+		)
+		log.Println("subscribed to queue: ", topicName)
+		if err != nil {
+			panic(err)
+		}
+
+		go func() {
+			for deliverMsg := range deliveryMsgs {
+				var msg Message
+				err := json.Unmarshal(deliverMsg.Body, &msg)
+				if err != nil {
+					panic(err)
+				}
+				msgs <- msg
+			}
+		}()
+	}
+
+	return msgs
+
 }
 
 type AmqpConfig struct {

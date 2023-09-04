@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"goq/pkg/pubsub"
@@ -20,7 +22,7 @@ type Greeter struct {
 
 // Handle handles the message
 func (g Greeter) Handle(ctx context.Context, msg pubsub.Message) error {
-	log.Println("msg: ", msg)
+	log.Println("hello: ", msg)
 	return nil
 }
 
@@ -36,6 +38,13 @@ func (g Greeter) Async(ctx context.Context, text string) error {
 
 func (g Greeter) Delay(ctx context.Context, msg pubsub.Message) error {
 	return g.GetPubsuber().Publish(ctx, g.Queue, msg)
+}
+
+func (g Greeter) GetName() string {
+	return g.Name
+}
+func (g Greeter) GetQueue() string {
+	return g.Queue
 }
 
 func NewGreeter(name string, queue string) *Greeter {
@@ -59,8 +68,11 @@ func publish(t *Greeter) {
 }
 
 func main() {
+	if len(os.Args) == 1 {
+		fmt.Println("usage: go run main.go [worker|publisher]")
+		return
+	}
 	ctx := context.Background()
-	log.Println("start example")
 
 	cfg := pubsub.AmqpConfig{
 		DNS: "amqp://guest:guest@localhost:5672",
@@ -74,8 +86,13 @@ func main() {
 	// worker
 	w := worker.NewWorker(amqpPubsub)
 	w.Register(ctx, greeter)
+	runType := os.Args[1]
+	switch runType {
+	case "worker":
+		w.Run()
+	case "publisher":
+		go publish(greeter)
+	}
 
-	go publish(greeter)
-	// w.Run()
 	time.Sleep(10 * time.Second)
 }

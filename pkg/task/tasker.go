@@ -10,6 +10,8 @@ type Tasker interface {
 	Handle(ctx context.Context, msg pubsub.Message) error
 	Delay(ctx context.Context, payload pubsub.Message) error
 	SetPubsuber(ctx context.Context, pubsuber pubsub.Pubsuber)
+	GetName() string
+	GetQueue() string
 }
 
 type BaseTasker struct {

@@ -2,34 +2,51 @@ package worker
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"goq/pkg/pubsub"
 	"goq/pkg/task"
+	"log"
 )
 
 type Worker struct {
-	tasks    []task.Tasker
 	pubsuber pubsub.Pubsuber
+	taskMap  map[string]task.Tasker
 }
 
 func NewWorker(pubsuber pubsub.Pubsuber) *Worker {
 	return &Worker{
-		tasks:    []task.Tasker{},
 		pubsuber: pubsuber,
+		taskMap:  map[string]task.Tasker{},
 	}
 }
 
 func (w *Worker) Run() {
-	for _, t := range w.tasks {
-		go func(t task.Tasker) {
-			for {
-				msg := <-w.pubsuber.Subscribe(context.Background(), "asdf")
-				t.Handle(context.Background(), msg)
-			}
-		}(t)
+	queues := []string{}
+	for _, t := range w.taskMap {
+		queues = append(queues, t.GetQueue())
 	}
+	msgs := w.pubsuber.Subscribe(context.Background(), queues...)
+	go func() {
+		for msg := range msgs {
+			t, ok := w.taskMap[msg.TaskName]
+			if !ok {
+				log.Printf("task '%s' not found\n", msg.TaskName)
+				continue
+			}
+			err := t.Handle(context.Background(), msg)
+			if err != nil {
+				log.Println("error handling message: ", err)
+			}
+		}
+	}()
 }
 
 func (w *Worker) Register(ctx context.Context, t task.Tasker) {
 	t.SetPubsuber(ctx, w.pubsuber)
-	w.tasks = append(w.tasks, t)
+	if _, ok := w.taskMap[t.GetName()]; ok {
+		err := errors.New(fmt.Sprintf("task '%s' already registered", t.GetName()))
+		panic(err)
+	}
+	w.taskMap[t.GetName()] = t
 }
