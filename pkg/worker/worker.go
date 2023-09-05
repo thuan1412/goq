@@ -34,33 +34,29 @@ func (w *Worker) Run(ctx context.Context) {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	msgs := w.pubsuber.Subscribe(context.Background(), queues...)
-	go func() {
-		for {
-			select {
-			case msg := <-msgs:
-				t, ok := w.taskMap[msg.TaskName]
-				if !ok {
-					log.Printf("task '%s' not found\n", msg.TaskName)
-					continue
-				}
-				err := t.Handle(context.Background(), msg)
-				if err != nil {
-					log.Println("error handling message: ", err)
-				}
-				fmt.Println("received message: ", msgs)
-			case sig := <-sigs:
-				// we only listet to these two signals, it means this if block is redundant
-				// but we keep it here for future change when we need to listen to more signals
-				if sig == syscall.SIGINT || sig == syscall.SIGTERM {
-					w.pubsuber.Close(ctx)
-					// prevent the losing task when worker is down not gracefully
-					time.Sleep(3 * time.Second)
-					os.Exit(0)
-				}
+	for {
+		select {
+		case msg := <-msgs:
+			t, ok := w.taskMap[msg.TaskName]
+			if !ok {
+				log.Printf("task '%s' not found\n", msg.TaskName)
+				continue
+			}
+			err := t.Handle(context.Background(), msg)
+			if err != nil {
+				log.Println("error handling message: ", err)
+			}
+			fmt.Println("received message: ", msgs)
+		case sig := <-sigs:
+			// we only listet to these two signals, it means this if block is redundant
+			// but we keep it here for future change when we need to listen to more signals
+			if sig == syscall.SIGINT || sig == syscall.SIGTERM {
+				w.pubsuber.Close(ctx)
+				// prevent the losing task when worker is down not gracefully
+				time.Sleep(3 * time.Second)
+				os.Exit(0)
 			}
 		}
-	}()
-	for {
 	}
 }
 
