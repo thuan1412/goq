@@ -17,6 +17,7 @@ const defaultDns = "amqp://localhost:5672/"
 const consumerName = "goq"
 
 // Amqp is a struct that implements the PubSub interface for AMQP
+// note: difference between conn and ch (https://stackoverflow.com/q/18418936)
 type Amqp struct {
 	conn        *amqp.Connection
 	ch          *amqp.Channel
@@ -53,6 +54,18 @@ func (a Amqp) Subscribe(ctx context.Context, topicNames ...string) <-chan Messag
 	msgs := make(chan Message, 10)
 
 	for idx, topicName := range topicNames {
+		_, err := a.ch.QueueDeclare(
+			topicName, // name
+			false,     // durable
+			false,     // delete when unused
+			false,     // exclusive
+			false,     // no-wait
+			nil,       // arguments
+		)
+		if err != nil {
+			panic(err)
+		}
+
 		deliveryMsgs, err := a.ch.Consume(
 			topicName,
 			fmt.Sprintf("%s-%s-%d", consumerName, topicName, idx),
@@ -80,7 +93,16 @@ func (a Amqp) Subscribe(ctx context.Context, topicNames ...string) <-chan Messag
 	}
 
 	return msgs
+}
 
+func (a Amqp) Close(_ context.Context) error {
+	if err := a.ch.Close(); err != nil {
+		return err
+	}
+	if err := a.conn.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 type AmqpConfig struct {

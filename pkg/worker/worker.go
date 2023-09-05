@@ -7,6 +7,10 @@ import (
 	"goq/pkg/pubsub"
 	"goq/pkg/task"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 type Worker struct {
@@ -21,25 +25,43 @@ func NewWorker(pubsuber pubsub.Pubsuber) *Worker {
 	}
 }
 
-func (w *Worker) Run() {
+func (w *Worker) Run(ctx context.Context) {
 	queues := []string{}
 	for _, t := range w.taskMap {
 		queues = append(queues, t.GetQueue())
 	}
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	msgs := w.pubsuber.Subscribe(context.Background(), queues...)
 	go func() {
-		for msg := range msgs {
-			t, ok := w.taskMap[msg.TaskName]
-			if !ok {
-				log.Printf("task '%s' not found\n", msg.TaskName)
-				continue
-			}
-			err := t.Handle(context.Background(), msg)
-			if err != nil {
-				log.Println("error handling message: ", err)
+		for {
+			select {
+			case msg := <-msgs:
+				t, ok := w.taskMap[msg.TaskName]
+				if !ok {
+					log.Printf("task '%s' not found\n", msg.TaskName)
+					continue
+				}
+				err := t.Handle(context.Background(), msg)
+				if err != nil {
+					log.Println("error handling message: ", err)
+				}
+				fmt.Println("received message: ", msgs)
+			case sig := <-sigs:
+				// we only listet to these two signals, it means this if block is redundant
+				// but we keep it here for future change when we need to listen to more signals
+				if sig == syscall.SIGINT || sig == syscall.SIGTERM {
+					w.pubsuber.Close(ctx)
+					// prevent the losing task when worker is down not gracefully
+					time.Sleep(3 * time.Second)
+					os.Exit(0)
+				}
 			}
 		}
 	}()
+	for {
+	}
 }
 
 func (w *Worker) Register(ctx context.Context, t task.Tasker) {

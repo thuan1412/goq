@@ -89,10 +89,9 @@ func main() {
 	runType := os.Args[1]
 	switch runType {
 	case "worker":
-		w.Run()
+		w.Run(ctx)
 	case "publisher":
 		go publish(greeter)
+		time.Sleep(10 * time.Second)
 	}
-
-	time.Sleep(10 * time.Second)
 }
