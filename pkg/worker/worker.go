@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"goq/pkg/pubsub"
 	"goq/pkg/task"
@@ -48,7 +47,7 @@ func (w *Worker) Run(ctx context.Context) {
 			}
 			fmt.Println("received message: ", msgs)
 		case sig := <-sigs:
-			// we only listet to these two signals, it means this if block is redundant
+			// we only listen to these two signals, it means this if block is redundant
 			// but we keep it here for future change when we need to listen to more signals
 			if sig == syscall.SIGINT || sig == syscall.SIGTERM {
 				w.pubsuber.Close(ctx)
@@ -60,10 +59,14 @@ func (w *Worker) Run(ctx context.Context) {
 	}
 }
 
+func (w *Worker) Stop(ctx context.Context) {
+	w.pubsuber.Close(ctx)
+}
+
 func (w *Worker) Register(ctx context.Context, t task.Tasker) {
 	t.SetPubsuber(ctx, w.pubsuber)
 	if _, ok := w.taskMap[t.GetName()]; ok {
-		err := errors.New(fmt.Sprintf("task '%s' already registered", t.GetName()))
+		err := fmt.Errorf("task '%s' already registered", t.GetName())
 		panic(err)
 	}
 	w.taskMap[t.GetName()] = t
