@@ -6,6 +6,7 @@ import (
 	"goq/pkg/pubsub"
 	"goq/pkg/task"
 	"goq/pkg/worker"
+	"io/fs"
 	"log"
 	"os"
 	"testing"
@@ -23,16 +24,27 @@ type FileWriter struct {
 const tmpFolder = "./tests/simple_task/"
 
 type GreeterPayload struct {
-	filepath string
-	content  string
+	Filepath string `json:"filepath,omitempty"`
+	Content  string `json:"content,omitempty"`
 }
 
 // Handle handles the message
 func (g FileWriter) Handle(ctx context.Context, msg pubsub.Message) error {
 	// write content to file
-	payload := msg.Payload.(GreeterPayload)
-	err := os.WriteFile(payload.filepath, []byte(payload.content), 0644)
+	payloadMap := msg.Payload.(map[string]interface{})
+	payload := GreeterPayload{
+		Filepath: payloadMap["filepath"].(string),
+		Content:  payloadMap["content"].(string),
+	}
+	var term fs.FileMode = 0644
+	err := os.MkdirAll(tmpFolder, term)
 	if err != nil {
+		fmt.Println("error creating dir:", err)
+		return err
+	}
+	err = os.WriteFile(payload.Filepath, []byte(payload.Content), term)
+	if err != nil {
+		fmt.Println("error writing file:", err)
 		return err
 	}
 	return nil
@@ -83,8 +95,8 @@ func TestSingleTask(t *testing.T) {
 	filePath := tmpFolder + "test.txt"
 	content := "hello world"
 	payload := GreeterPayload{
-		filepath: filePath,
-		content:  content,
+		Filepath: filePath,
+		Content:  content,
 	}
 	err = fileWriter.Async(ctx, payload)
 	if err != nil {
@@ -92,7 +104,7 @@ func TestSingleTask(t *testing.T) {
 	}
 
 	// start worker
-	w.Run(ctx)
+	go w.Run(ctx)
 
 	// wait for worker 3 second
 	time.Sleep(3 * time.Second)

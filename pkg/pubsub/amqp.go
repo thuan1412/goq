@@ -41,7 +41,10 @@ func (a Amqp) Publish(ctx context.Context, topicName string, msg Message) error 
 		return err
 	}
 
-	a.ch.QueueBind(topicName, topicName, a.exchange, false, nil)
+	err = a.ch.QueueBind(topicName, topicName, a.exchange, false, nil)
+	if err != nil {
+		return err
+	}
 
 	return a.ch.PublishWithContext(ctx, a.exchange, topicName, false, false, amqp.Publishing{
 		ContentType: a.contentType,

@@ -1,1 +1,4 @@
 mode: set
+goq/tests/container.go:10.57,31.16 4 1
+goq/tests/container.go:31.16,32.13 1 0
+goq/tests/container.go:34.2,34.26 1 1
