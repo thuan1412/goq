@@ -17,8 +17,7 @@ import (
 
 type FileWriter struct {
 	task.BaseTasker
-	Name  string
-	Queue string
+	Config task.Config
 }
 
 const tmpFolder = "./tests/simple_task/"
@@ -50,24 +49,17 @@ func (g FileWriter) Handle(ctx context.Context, msg pubsub.Message) error {
 	return nil
 }
 
-func (g FileWriter) Async(ctx context.Context, payload GreeterPayload) error {
+func (g *FileWriter) Async(ctx context.Context, payload GreeterPayload) error {
 	msg := pubsub.Message{
 		Payload:  payload,
-		TaskName: g.Name,
+		TaskName: task.GetTaskName(g),
 		UUID:     uuid.New().String(),
 	}
 	return g.Delay(ctx, msg)
 }
 
-func (g FileWriter) Delay(ctx context.Context, msg pubsub.Message) error {
-	return g.GetPubsuber().Publish(ctx, g.Queue, msg)
-}
-
-func (g FileWriter) GetName() string {
-	return g.Name
-}
-func (g FileWriter) GetQueue() string {
-	return g.Queue
+func (g *FileWriter) Delay(ctx context.Context, msg pubsub.Message) error {
+	return g.GetPubsuber().Publish(ctx, task.GetTaskQueue(g), msg)
 }
 
 func TestSingleTask(t *testing.T) {
@@ -82,10 +74,7 @@ func TestSingleTask(t *testing.T) {
 		panic(err)
 	}
 
-	fileWriter := FileWriter{
-		Name:  "default",
-		Queue: "default",
-	}
+	fileWriter := FileWriter{}
 
 	// worker
 	w := worker.NewWorker(amqpPubsub)
