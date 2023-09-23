@@ -27,7 +27,7 @@ func NewWorker(pubsuber pubsub.Pubsuber) *Worker {
 func (w *Worker) Run(ctx context.Context) {
 	queues := []string{}
 	for _, t := range w.taskMap {
-		queues = append(queues, t.GetQueue())
+		queues = append(queues, task.GetTaskQueue(t))
 	}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -65,9 +65,9 @@ func (w *Worker) Stop(ctx context.Context) {
 
 func (w *Worker) Register(ctx context.Context, t task.Tasker) {
 	t.SetPubsuber(ctx, w.pubsuber)
-	if _, ok := w.taskMap[t.GetName()]; ok {
-		err := fmt.Errorf("task '%s' already registered", t.GetName())
+	if _, ok := w.taskMap[task.GetTaskName(t)]; ok {
+		err := fmt.Errorf("task '%s' already registered", task.GetTaskName(t))
 		panic(err)
 	}
-	w.taskMap[t.GetName()] = t
+	w.taskMap[task.GetTaskName(t)] = t
 }

@@ -16,17 +16,18 @@ type Greeter struct {
 
 // Handle handles the message
 func (g *Greeter) Handle(ctx context.Context, msg pubsub.Message) error {
-	log.Println("greet: ", msg)
+	log.Println("hello: ", msg)
 	return nil
 }
 
+// Async calles Delay to publish message into queue
+// TODO: remove this or Delay to simplify the interface
 func (g *Greeter) Async(ctx context.Context, text string) error {
 	msg := pubsub.Message{
 		Payload:  text,
 		TaskName: task.GetTaskName(g),
 		UUID:     uuid.New().String(),
 	}
-
 	return g.Delay(ctx, msg)
 }
 

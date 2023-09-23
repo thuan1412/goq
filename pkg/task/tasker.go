@@ -10,13 +10,10 @@ type Tasker interface {
 	Handle(ctx context.Context, msg pubsub.Message) error
 	Delay(ctx context.Context, payload pubsub.Message) error
 	SetPubsuber(ctx context.Context, pubsuber pubsub.Pubsuber)
-	GetName() string
-	GetQueue() string
 }
 
 type BaseTasker struct {
-	pubsuber  pubsub.Pubsuber
-	topicName string
+	pubsuber pubsub.Pubsuber
 }
 
 func (b *BaseTasker) SetPubsuber(_ context.Context, pubsuber pubsub.Pubsuber) {

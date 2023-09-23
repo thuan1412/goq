@@ -6,7 +6,7 @@ Learning project that implements distributed-message queue like [Celery]
 - [ ] Add task result for monitoring
 - [ ] Use wire in worker initialization to reduce boilerplate
 - [ ] Use github CI to check lint
-- [ ] Use testcontainer to implement integration test
+- [x] Use testcontainer to implement integration test
 
 ## Concepts
 
